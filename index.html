@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Many Faces: Impression Formation Activity</title>
+<style>
+:root{--bg:#faf8f5;--card:#fff;--ink:#23211f;--mute:#6b665f;--line:#e2ddd5;--acc:#5b4bb7;--accbg:#ece9fa;--w:#d9593d;--c:#2a7f9e;--f:#3a8f5c;--g:#c08a1e;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1a1f;--card:#26252c;--ink:#efece6;--mute:#a7a29a;--line:#3a3842;--acc:#a99cf5;--accbg:#34305a;--w:#ee8a70;--c:#6cbad6;--f:#6cc48e;--g:#e2b252}}
+:root[data-theme="dark"]{--bg:#1b1a1f;--card:#26252c;--ink:#efece6;--mute:#a7a29a;--line:#3a3842;--acc:#a99cf5;--accbg:#34305a;--w:#ee8a70;--c:#6cbad6;--f:#6cc48e;--g:#e2b252}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:760px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:1.7rem;margin:.2em 0}h2{font-size:1.3rem;margin:.2em 0 .4em}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0}
+.mute{color:var(--mute)}
+.prog{display:flex;gap:6px;margin:6px 0 14px}
+.prog i{flex:1;height:6px;border-radius:3px;background:var(--line)}.prog i.on{background:var(--acc)}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--acc);background:var(--acc);color:#fff;padding:10px 18px}
+:root:not([data-theme="light"]) button{color:#16141f}
+@media (prefers-color-scheme:light){button{color:#fff}}
+button.alt{background:transparent;color:var(--acc)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--g);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.sl{margin:14px 0}
+.sl label{display:flex;justify-content:space-between;font-weight:600}
+.sl .ends{display:flex;justify-content:space-between;font-size:.85rem;color:var(--mute)}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.bar{margin:8px 0}
+.bar .t{display:flex;justify-content:space-between;font-size:.92rem}
+.bar .b{height:12px;border-radius:6px;background:var(--line);overflow:hidden}
+.bar .b span{display:block;height:100%;transition:width .3s}
+textarea{width:100%;min-height:70px;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.tag{display:inline-block;background:var(--accbg);color:var(--acc);border-radius:20px;padding:2px 12px;font-size:.85rem;font-weight:600}
+.scen{border-left:4px solid var(--acc);padding:4px 12px;margin:10px 0;background:var(--accbg);border-radius:0 10px 10px 0}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{padding:6px 4px;text-align:center;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+td .cell{border-radius:6px;padding:3px 0;background:linear-gradient(90deg,var(--accbg) var(--p),transparent var(--p))}
+.wrap{overflow-x:auto}
+ul{padding-left:1.2em}
+</style>
+</head>
+<body>
+<main>
+<h1>Many Faces</h1>
+<p class="mute">An activity on impression management and self-presentation</p>
+<div class="prog" id="prog" aria-hidden="true"></div>
+<div id="app" aria-live="polite"></div>
+</main>
+<script>
+const TR=[
+{k:'formal',n:'Formality',a:'Casual',b:'Formal'},
+{k:'promo',n:'Self-promotion',a:'Modest',b:'Show achievements'},
+{k:'disc',n:'Self-disclosure',a:'Private',b:'Open and personal'},
+{k:'play',n:'Playfulness',a:'Serious',b:'Joking and playful'},
+{k:'polish',n:'Polish',a:'Spontaneous',b:'Carefully curated'}];
+const CX=[
+{id:'interview',n:'A job interview',s:'You are meeting a panel for a role you really want. They know nothing about you beyond your résumé.',norm:[85,70,25,25,90]},
+{id:'social',n:'A social media profile',s:'You are setting up or refreshing a public profile. Classmates, family, and future employers could all see it.',norm:[40,60,50,65,75]},
+{id:'date',n:'A first date or social gathering',s:'You are meeting someone new, or a room of people you barely know. Conversation is unscripted.',norm:[40,40,60,65,60]},
+{id:'board',n:'A university discussion board',s:'You are posting a reply that your tutor and the whole class will read, and which stays visible all semester.',norm:[65,45,30,30,65]},
+{id:'friend',n:'A conversation with a close friend',s:'You are catching up with someone who has known you for years and has seen you at your best and worst.',norm:[10,15,90,80,10]}];
+const S={step:0,nat:[50,50,50,50,50],pres:CX.map(()=>[50,50,50,50,50]),touched:CX.map(()=>false),notes:CX.map(()=>'' ),pred:''};
+const app=document.getElementById('app'),prog=document.getElementById('prog');
+const clamp=x=>Math.max(0,Math.min(100,Math.round(x)));
+const mad=(a,b)=>a.reduce((s,v,i)=>s+Math.abs(v-b[i]),0)/a.length;
+function warmth(v){return clamp(.38*v[2]+.3*v[3]+.22*(100-v[0])+.1*50-.15*Math.max(0,v[1]-50)+8)}
+function comp(v){return clamp(.35*v[4]+.3*v[1]+.25*v[0]+.1*(100-v[3]))}
+function bar(l,v,c){return `<div class="bar"><div class="t"><span>${l}</span><span>${v}</span></div><div class="b" role="img" aria-label="${l}: ${v} out of 100"><span style="width:${v}%;background:var(${c})"></span></div></div>`}
+function sliders(arr,pre){return TR.map((t,i)=>`<div class="sl"><label for="${pre}${i}">${t.n} <output id="${pre}o${i}">${arr[i]}</output></label><input type="range" id="${pre}${i}" min="0" max="100" value="${arr[i]}" data-i="${i}"><div class="ends"><span>${t.a}</span><span>${t.b}</span></div></div>`).join('')}
+function setProg(){prog.innerHTML=Array.from({length:7},(_,i)=>`<i class="${i<=S.step?'on':''}"></i>`).join('')}
+function go(n){S.step=n;render();window.scrollTo(0,0)}
+function render(){setProg();
+if(S.step===0){app.innerHTML=`<div class="card"><h2>Welcome</h2><p>People form impressions of us within seconds, and we constantly shape what they see. Psychologists call this <b>impression management</b> (or self-presentation). In this activity you will decide how you would present yourself in five everyday situations, then see what the choices reveal.</p><p class="mute">There are no right answers. Your responses stay on this page and are not sent anywhere.</p><div class="row"><button id="go">Start</button></div></div>`;
+document.getElementById('go').onclick=()=>go(1)}
+else if(S.step===1){app.innerHTML=`<div class="card"><span class="tag">Step 1</span><h2>Your natural self</h2><p>Think about when you are fully relaxed and not trying to impress anyone. Where do you naturally sit on each dimension?</p>${sliders(S.nat,'n')}<div class="row"><button id="nx">Continue</button></div></div>`;
+app.querySelectorAll('input').forEach(el=>el.oninput=()=>{const i=+el.dataset.i;S.nat[i]=+el.value;document.getElementById('no'+i).textContent=el.value});
+document.getElementById('nx').onclick=()=>go(2)}
+else if(S.step<=6){const ci=S.step-2,c=CX[ci],v=S.pres[ci];
+app.innerHTML=`<div class="card"><span class="tag">Context ${ci+1} of 5</span><h2>${c.n}</h2><div class="scen">${c.s}</div><p>Set the slider to show how you would <b>deliberately present yourself</b> here.</p>${sliders(v,'p')}
+<div id="res" style="margin-top:18px"></div>
+<label for="note"><b>In a sentence or two, why did you choose this?</b></label><textarea id="note">${S.notes[ci]}</textarea>
+<div class="row">${ci>0?'<button class="alt" id="bk">Back</button>':''}<button id="nx">${ci<4?'Next context':'See my results'}</button></div></div>`;
+const upd=()=>{S.touched[ci]=true;const gap=Math.round(mad(v,S.nat)),fit=Math.round(100-mad(v,c.norm));
+let big=TR.map((t,i)=>({t,d:v[i]-c.norm[i]})).sort((a,b)=>Math.abs(b.d)-Math.abs(a.d))[0];
+const msg=Math.abs(big.d)<15?'Your choices sit close to what this audience typically expects.':`Compared with what this audience typically expects, you are noticeably ${big.d>0?'higher':'lower'} on <b>${big.t.n.toLowerCase()}</b>. How might they read that?`;
+document.getElementById('res').innerHTML=`<h3 style="margin:0 0 4px">How an observer might see you</h3>${bar('Warmth (friendly, trustworthy)',warmth(v),'--w')}${bar('Competence (capable, skilled)',comp(v),'--c')}${bar('Fit with what this context expects',fit,'--f')}${bar('Distance from your natural self',gap,'--g')}<p class="mute" style="margin:8px 0 0">${msg}</p>`};
+app.querySelectorAll('input').forEach(el=>el.oninput=()=>{const i=+el.dataset.i;v[i]=+el.value;document.getElementById('po'+i).textContent=el.value;upd()});
+upd();
+document.getElementById('note').oninput=e=>S.notes[ci]=e.target.value;
+document.getElementById('nx').onclick=()=>go(S.step+1);
+const bk=document.getElementById('bk');if(bk)bk.onclick=()=>go(S.step-1)}
+else{summary()}}
+function summary(){setProg();
+const gaps=CX.map((c,i)=>({c,g:Math.round(mad(S.pres[i],S.nat))}));
+const hi=[...gaps].sort((a,b)=>b.g-a.g)[0],lo=[...gaps].sort((a,b)=>a.g-b.g)[0];
+const varT=TR.map((t,i)=>{const xs=S.pres.map(p=>p[i]);return{t,r:Math.max(...xs)-Math.min(...xs)}}).sort((a,b)=>b.r-a.r)[0];
+const head='<tr><th scope="col">Dimension</th><th scope="col">Natural</th>'+CX.map(c=>`<th scope="col">${c.n.replace(/^A |^An /,'')}</th>`).join('')+'</tr>';
+const rows=TR.map((t,i)=>`<tr><th scope="row" style="font-weight:600">${t.n}</th><td><div class="cell" style="--p:${S.nat[i]}%">${S.nat[i]}</div></td>${S.pres.map(p=>`<td><div class="cell" style="--p:${p[i]}%">${p[i]}</div></td>`).join('')}</tr>`).join('');
+const wr=CX.map((c,i)=>`<tr><th scope="row" style="font-weight:600">${c.n.replace(/^A |^An /,'')}</th><td>${warmth(S.pres[i])}</td><td>${comp(S.pres[i])}</td><td>${gaps[i].g}</td></tr>`).join('');
+app.innerHTML=`<div class="card"><span class="tag">Your results</span><h2>Your many faces</h2>
+<p>You adapted most in <b>${hi.c.n.toLowerCase()}</b> (average distance of ${hi.g} points from your natural self) and least in <b>${lo.c.n.toLowerCase()}</b> (${lo.g}). Your biggest swing across contexts was <b>${varT.t.n.toLowerCase()}</b> (${varT.r} points).</p>
+<div class="wrap"><table>${head}${rows}</table></div></div>
+<div class="card"><h2>Observer impressions</h2><div class="wrap"><table><tr><th scope="col">Context</th><th scope="col">Warmth</th><th scope="col">Competence</th><th scope="col">Distance from self</th></tr>${wr}</table></div>
+<p class="mute">These scores come from a simple model built for discussion, not from real data about you. Real observers also use appearance, voice, and prior expectations.</p></div>
+<div class="card"><h2>Connect to the concepts</h2><ul>
+<li><b>Self-presentation (Goffman):</b> we act differently on the “front stage” and the “back stage”. Which of your contexts felt most like back stage?</li>
+<li><b>Warmth and competence:</b> observers tend to judge people on these two dimensions first. Did any context force a trade-off between looking warm and looking capable?</li>
+<li><b>Primacy and the halo effect:</b> first impressions anchor later ones, and one strong trait colours the rest. Where would a first impression matter most for you?</li>
+<li><b>Context collapse:</b> on social media, many audiences see one profile. How did you resolve that?</li>
+<li><b>Self-monitoring:</b> how much do you adjust yourself to fit each situation? Is a bigger gap always inauthentic?</li></ul></div>
+<div class="card"><h2>Reflect</h2><p>Re-read your notes below, then discuss with a partner: <i>Which impression did you most want to make, and what did you decide not to show?</i></p>
+${CX.map((c,i)=>`<p><b>${c.n}:</b> ${S.notes[i]?S.notes[i].replace(/</g,'&lt;'):'<span class="mute">(no note)</span>'}</p>`).join('')}
+<div class="row"><button class="alt" id="bk">Back to edit</button><button id="rs">Start over</button></div></div>`;
+document.getElementById('bk').onclick=()=>go(6);
+document.getElementById('rs').onclick=()=>{S.nat=[50,50,50,50,50];S.pres=CX.map(()=>[50,50,50,50,50]);S.notes=CX.map(()=>'');go(0)}}
+render();
+</script>
+</body>
+</html>
